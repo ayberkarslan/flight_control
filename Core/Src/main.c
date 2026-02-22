@@ -17,16 +17,16 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <ms5611.h>
+
 #include "main.h"
 #include "fatfs.h"
-#include "ms5611.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "bno055.h"
+#include "BNO055_STM32.h"
 #include <string.h>
 #include <stdio.h>
+#include <ms5611.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,13 +64,17 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 // global değişkenler
+float groundAltitude = 0.0f; // en başta ms5611 için rampa basıncını alacağız ki bulunduğumuz yerin deniz seviyesine göre yüksekliğin alırsak fsm istemedeiğimiz modlara geçebilir.
+BNO055_Sensors_t bno_data;
 state currentState = ON_RAMP; //başta rampadan başlatıyoruz
 float currentAltitude = 0.0f; //işlemciyi yormamak adına sonunda f koyduk ki double ile işlem yapmasın, hep float kullanılsın.
 float maxAltitude = 0.0f;
 float previousAltitude = 0.0f;
+uint8_t OffsetDatas[22];
 
 // BNO055den veri çekmek için kullanacağımız yapıyı oluşturuyoruz, sonrasında tek tek x,y ve z eksenlerinden veri çekmek için orientation.x şeklinde structtan veri çekeceğiz
-bno055_vector_t orientation;
+//bno055_vector_t orientation;
+// buna gerek kalmadı, yeni kütüphane ile direkt bno_data.Euler.Z diyerek veriyi çekiyoruz
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -98,6 +102,145 @@ void drag_parachute_open() {
 void main_parachute_open() {
 
 }
+
+
+
+
+
+//BNO055 konfigurasyonları
+
+void BNO055Sensor_Init(void) {
+
+    BNO055_Init_t BNO055_InitStruct = {0};
+    ResetBNO055();
+    HAL_Delay(100); // sensörün kendine gelmesi için kısa bir bekleme
+
+    BNO055_InitStruct.ACC_Range = Range_16G;
+    BNO055_InitStruct.OP_Modes = NDOF;
+    BNO055_InitStruct.Unit_Sel = (UNIT_ORI_ANDROID | UNIT_EUL_DEG | UNIT_ACC_MS2);
+
+    BNO055_Init(BNO055_InitStruct);
+
+    // Rampada beklerken kalibrasyon yapıyoruz
+    if(Calibrate_BNO055()) {
+        getSensorOffsets(OffsetDatas); // başarılıysa ofsetleri al
+
+
+    }
+
+    else{
+        //printf("kalibrasyon başarısız");
+    }
+}
+
+
+
+
+//MS5611 konfigurasyonları
+void MS5611_Ramp_Init(void) {
+
+    if(ms5611_init() != 0) {
+        // printf("hata");
+    }
+
+    float summary = 0;
+    float temp, press, alt; // 3lü gelen verileri okumak için boş değişkenler
+
+    for(int i = 0; i < 10; i++) {
+        // fonksiyon 3 veriyi birden okuyup değişkenlerin içine atıyor
+        ms5611_getTemperatureAndPressure(&temp, &press, &alt);
+        summary += alt; // biz sadece irtifayı alıp topluyoruz
+        HAL_Delay(50);
+    }
+
+    groundAltitude = summary / 10.0f; // rampa yüksekliğini belirledik sonrasında gerçek yüksekliği bulmak için kullanacağız
+}
+
+
+void Sensor_Init(void) {
+    // MS5611 başlatma (hi2c2 kullanıyor)
+    MS5611_Ramp_Init();
+
+    // BNO055 başlatma
+    BNO055Sensor_Init();
+}
+
+
+
+
+// ana kontrol döngümüz
+void ucus_algoritmasi() {
+
+
+	float temp, press, alt;
+
+	    // ms5611'den irtifa verisi alıyoruz
+	    ms5611_getTemperatureAndPressure(&temp, &press, &alt);
+
+	    // rampa referansını çıkararak gerçek yüksekliği buluyoruz
+	    currentAltitude = alt - groundAltitude;
+
+
+    ReadData(&bno_data, SENSOR_EULER); //bno_data.Euler.Z gibi yapıların içini doldurmak için kullandık. SENSOR_EULER parametresi ile spesifik olarak euler açılarını istedik.
+
+
+
+    // Final State Machine'miz
+    switch(currentState) {
+
+        case ON_RAMP:
+            // irtifa kontrolü, 10 m'den yüksekdeysek uçuyoruz demektir.
+            if (currentAltitude > 10.0f) {
+                currentState = IN_FLIGHT;
+            }
+            break;
+
+        case IN_FLIGHT:
+            if (currentAltitude > maxAltitude) {
+                maxAltitude = currentAltitude;
+            }
+
+            // EK KONTROL, eğer roketin dikliği (euler açıslarına bakarak karar veriyoruz) 80 dereceden fazla saparsa acil durum kurtarmasını başlatacağız. (z ekseni genelde dikeyi temsil eder bno055 kütüphanelerinde ama sensörün nasıl monte edildiğine bağlı olarak da değişebilir, bu donanımla beraber ayarlanacak bir iştir.)
+            if (bno_data.Euler.Z > 80.0 || bno_data.Euler.Z < -80.0) {
+                drag_parachute_open();
+                currentState = DRAG_PARACHUTE_OPEN;
+            }
+
+            // apogee tespiti yaptık; eğer irtifa düşmeye başladıysa apogee'ye ulaşmışım ve hatta düşmeye başlamışım demektir
+            if (currentAltitude < (maxAltitude - 2.0f)) {
+                drag_parachute_open();
+                currentState = DRAG_PARACHUTE_OPEN;
+            }
+            break;
+
+        case DRAG_PARACHUTE_OPEN:
+            // ana paraşüt açılma irtifası (örnekte 500 metre olsun dedim)
+            if (currentAltitude < 500.0f) {
+                main_parachute_open();
+                currentState = MAIN_PARACHUTE_OPEN;
+            }
+            break;
+
+        case MAIN_PARACHUTE_OPEN:
+            // iniş tespiti yaptık; irtifa yere yakınsa LANDED state'ine geçtik.
+            if (currentAltitude < 10.0f) {
+                currentState = LANDED;
+            }
+            break;
+
+        case LANDED:
+            // telemetri ekranına indi verisi vs gönderilebilir
+            break;
+    }
+
+    // yükseklik değerini güncelliyoruz
+    previousAltitude = currentAltitude;
+}
+
+
+
+
+
 /* USER CODE END 0 */
 
 /**
@@ -141,9 +284,12 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  Sensor_Init();
+
   while (1)
   {
     ucus_algoritmasi();
+    HAL_Delay(20);// i2c hattını kilitlememek için biraz bekleme
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -541,66 +687,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-// ana kontrol döngümüz
-void ucus_algoritmasi() {
 
-    // ms5611'den irtifa verisi alıyoruz
-    currentAltitude = ms5611_get_altitude();
-
-    // bno055'ten euler açılarını okuyoruz ve oluşturduğumuz orientation yapısına yazdırıyoruz.
-    orientation = bno055_getVector(BNO055_VECTOR_EULER);
-
-    // Final State Machine'miz
-    switch(currentState) {
-
-        case ON_RAMP:
-            // irtifa kontrolü, 10 m'den yüksekdeysek uçuyoruz demektir.
-            if (currentAltitude > 10.0f) {
-                currentState = IN_FLIGHT;
-            }
-            break;
-
-        case IN_FLIGHT:
-            if (currentAltitude > maxAltitude) {
-                maxAltitude = currentAltitude;
-            }
-
-            // EK KONTROL, eğer roketin dikliği (euler açıslarına bakarak karar veriyoruz) 80 dereceden fazla saparsa acil durum kurtarmasını başlatacağız. (z ekseni genelde dikeyi temsil eder bno055 kütüphanelerinde ama sensörün nasıl monte edildiğine bağlı olarak da değişebilir, bu donanımla beraber ayarlanacak bir iştir.)
-            if (orientation.z > 80.0 || orientation.z < -80.0) {
-                drag_parachute_open();
-                currentState = DRAG_PARACHUTE_OPEN;
-            }
-
-            // apogee tespiti yaptık; eğer irtifa düşmeye başladıysa apogee'ye ulaşmışım ve hatta düşmeye başlamışım demektir
-            if (currentAltitude < (maxAltitude - 2.0f)) {
-                drag_parachute_open();
-                currentState = DRAG_PARACHUTE_OPEN;
-            }
-            break;
-
-        case DRAG_PARACHUTE_OPEN:
-            // ana paraşüt açılma irtifası (örnekte 500 metre olsun dedim)
-            if (currentAltitude < 500.0f) {
-                main_parachute_open();
-                currentState = MAIN_PARACHUTE_OPEN;
-            }
-            break;
-
-        case MAIN_PARACHUTE_OPEN:
-            // iniş tespiti yaptık; irtifa yere yakınsa LANDED state'ine geçtik.
-            if (currentAltitude < 10.0f) {
-                currentState = LANDED;
-            }
-            break;
-
-        case LANDED:
-            // telemetri ekranına indi verisi vs gönderilebilir
-            break;
-    }
-
-    // yükseklik değerini güncelliyoruz
-    previousAltitude = currentAltitude;
-}
 /* USER CODE END 4 */
 
 /**

@@ -1,6 +1,5 @@
-"./Core/Src/bno055.o"
+"./Core/Src/BNO055.o"
 "./Core/Src/main.o"
-"./Core/Src/main_sadece_kurtarma_algoritmasi.o"
 "./Core/Src/ms5611.o"
 "./Core/Src/stm32f4xx_hal_msp.o"
 "./Core/Src/stm32f4xx_hal_timebase_tim.o"

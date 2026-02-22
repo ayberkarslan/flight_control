@@ -1,0 +1,17 @@
+../Core/Src/main.c:98:6:drag_parachute_open	1
+../Core/Src/main.c:102:6:main_parachute_open	1
+../Core/Src/main.c:112:6:BNO055Sensor_Init	2
+../Core/Src/main.c:140:6:MS5611_Ramp_Init	2
+../Core/Src/main.c:160:6:Sensor_Init	1
+../Core/Src/main.c:172:6:ucus_algoritmasi	12
+../Core/Src/main.c:250:5:main	1
+../Core/Src/main.c:304:6:SystemClock_Config	4
+../Core/Src/main.c:359:13:MX_I2C1_Init	2
+../Core/Src/main.c:393:13:MX_I2C2_Init	2
+../Core/Src/main.c:427:13:MX_SPI1_Init	2
+../Core/Src/main.c:465:13:MX_TIM2_Init	7
+../Core/Src/main.c:528:13:MX_TIM3_Init	9
+../Core/Src/main.c:599:13:MX_USART2_UART_Init	2
+../Core/Src/main.c:632:13:MX_GPIO_Init	1
+../Core/Src/main.c:701:6:HAL_TIM_PeriodElapsedCallback	2
+../Core/Src/main.c:718:6:Error_Handler	1

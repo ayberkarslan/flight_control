@@ -1,8 +1,0 @@
-compiler:
-- gcc
-sudo: true
-script:
-  - mkdir -p out
-  - make build
-  - sudo pip install cpplint
-  - make lint
