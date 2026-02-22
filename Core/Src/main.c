@@ -20,6 +20,7 @@
 #include <ms5611.h>
 #include "main.h"
 #include "fatfs.h"
+#include "ms5611.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
