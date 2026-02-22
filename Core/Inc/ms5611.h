@@ -4,7 +4,7 @@
 #define MS5611_h
 
 #include <stdint.h>
-
+#include "main.h"
 // #define USE_OS_DELAY 1 // uncomment to use osDelay() instead of HAL_Delay()
 
 #define MS5611_ADDRESS (0x77)

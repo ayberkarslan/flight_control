@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include "stm32f4xx_hal.h"
 #include <stdbool.h>
+#include "main.h"
 
 extern I2C_HandleTypeDef hi2c2;
 #define bno_i2c (hi2c2)

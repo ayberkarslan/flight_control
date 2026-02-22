@@ -1,8 +1,9 @@
 // author: dogu
 #include <ms5611.h>
 #include "math.h"
-
+#include "stm32f4xx_hal.h"
 #include "main.h"
+
 extern I2C_HandleTypeDef hi2c2;
 #define MS5611_I2C &hi2c2
 

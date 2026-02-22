@@ -59,38 +59,6 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define LED_3_Pin GPIO_PIN_14
-#define LED_3_GPIO_Port GPIOC
-#define USART_TX_Pin GPIO_PIN_2
-#define USART_TX_GPIO_Port GPIOA
-#define USART_RX_Pin GPIO_PIN_3
-#define USART_RX_GPIO_Port GPIOA
-#define SRV_2_Pin GPIO_PIN_0
-#define SRV_2_GPIO_Port GPIOB
-#define SRV_3_Pin GPIO_PIN_1
-#define SRV_3_GPIO_Port GPIOB
-#define SRV_KRT_Pin GPIO_PIN_14
-#define SRV_KRT_GPIO_Port GPIOB
-#define SRV_4_Pin GPIO_PIN_6
-#define SRV_4_GPIO_Port GPIOC
-#define SRV_1_Pin GPIO_PIN_7
-#define SRV_1_GPIO_Port GPIOC
-#define TMS_Pin GPIO_PIN_13
-#define TMS_GPIO_Port GPIOA
-#define TCK_Pin GPIO_PIN_14
-#define TCK_GPIO_Port GPIOA
-#define SD_CSS_Pin GPIO_PIN_15
-#define SD_CSS_GPIO_Port GPIOA
-#define LED_2_Pin GPIO_PIN_2
-#define LED_2_GPIO_Port GPIOD
-#define LED_1_Pin GPIO_PIN_3
-#define LED_1_GPIO_Port GPIOB
-#define BNO_RST_Pin GPIO_PIN_5
-#define BNO_RST_GPIO_Port GPIOB
-#define ESC_1_Pin GPIO_PIN_8
-#define ESC_1_GPIO_Port GPIOB
-#define ESC_2_Pin GPIO_PIN_9
-#define ESC_2_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 
